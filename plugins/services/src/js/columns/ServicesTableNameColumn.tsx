@@ -10,7 +10,6 @@ import {
 import NestedServiceLinks from "#SRC/js/components/NestedServiceLinks";
 import ServiceTree from "../structs/ServiceTree";
 import Service from "../structs/Service";
-import { isSDKService } from "../utils/ServiceUtil";
 import Pod from "../structs/Pod";
 import { SortDirection } from "plugins/services/src/js/types/SortDirection";
 import ServiceTableUtil from "../utils/ServiceTableUtil";
@@ -64,7 +63,6 @@ function getServiceLink(service: any, isFiltered: boolean): any {
   const serviceLink = isGroup
     ? `/services/overview/${id}`
     : `/services/detail/${id}`;
-
   if (isFiltered) {
     return (
       <NestedServiceLinks
@@ -112,7 +110,6 @@ function getOpenInNewWindowLink(service: any): any {
 function hasWebUI(service: any): any {
   return (
     service instanceof Service &&
-    !isSDKService(service) &&
     service.getWebURL() != null &&
     service.getWebURL() !== ""
   );

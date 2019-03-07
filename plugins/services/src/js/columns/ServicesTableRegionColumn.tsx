@@ -15,8 +15,8 @@ export function regionRenderer(
   const localRegion: string = CompositeState.getMasterNode().getRegionName();
   let regions: string[] = service.getRegions();
 
-  regions = regions.map(
-    region => (region === localRegion ? region + " (Local)" : region)
+  regions = regions.map(region =>
+    region === localRegion ? region + " (Local)" : region
   );
 
   if (regions.length === 0) {

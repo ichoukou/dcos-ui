@@ -26,7 +26,6 @@ const STOP = ServiceActionItem.STOP;
 function hasWebUI(service: Service | Pod | ServiceTree) {
   return (
     service instanceof Service &&
-    !isSDKService(service) &&
     service.getWebURL() != null &&
     service.getWebURL() !== ""
   );
@@ -177,11 +176,15 @@ export function actionsRendererFactory(
     });
 
     if (service.getServiceStatus() === (ServiceStatus as any).DELETING) {
-      return renderServiceActionsDropdown(
-        service,
-        actions,
-        handleActionDisabledModalOpen,
-        handleServiceAction
+      return (
+        <Cell>
+          {renderServiceActionsDropdown(
+            service,
+            actions,
+            handleActionDisabledModalOpen,
+            handleServiceAction
+          )}
+        </Cell>
       );
     }
 
