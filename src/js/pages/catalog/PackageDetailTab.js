@@ -8,8 +8,14 @@ import React from "react";
 /* eslint-enable no-unused-vars */
 import { StoreMixin } from "mesosphere-shared-reactjs";
 import { Dropdown, Tooltip, Modal } from "reactjs-components";
+import { Badge, Icon, InfoBoxInline } from "@dcos/ui-kit";
+import { SystemIcons } from "@dcos/ui-kit/dist/packages/icons/dist/system-icons-enum";
+import { ProductIcons } from "@dcos/ui-kit/dist/packages/icons/dist/product-icons-enum";
+import {
+  green,
+  iconSizeL
+} from "@dcos/ui-kit/dist/packages/design-tokens/build/js/designTokens";
 
-import Icon from "#SRC/js/components/Icon";
 import Breadcrumb from "#SRC/js/components/Breadcrumb";
 import BreadcrumbTextContent from "#SRC/js/components/BreadcrumbTextContent";
 import CosmosPackagesStore from "#SRC/js/stores/CosmosPackagesStore";
@@ -21,7 +27,6 @@ import MetadataStore from "#SRC/js/stores/MetadataStore";
 import Page from "#SRC/js/components/Page";
 import RequestErrorMsg from "#SRC/js/components/RequestErrorMsg";
 import StringUtil from "#SRC/js/utils/StringUtil";
-import { Badge, InfoBoxInline } from "@dcos/ui-kit";
 
 const semver = require("semver");
 
@@ -48,7 +53,12 @@ const PackageDetailBreadcrumbs = ({ cosmosPackage, isLoading }) => {
     </Breadcrumb>
   ];
 
-  return <Page.Header.Breadcrumbs iconID="catalog" breadcrumbs={crumbs} />;
+  return (
+    <Page.Header.Breadcrumbs
+      iconID={ProductIcons.Packages}
+      breadcrumbs={crumbs}
+    />
+  );
 };
 
 const METHODS_TO_BIND = [
@@ -356,7 +366,7 @@ class PackageDetailTab extends mixin(StoreMixin) {
 
     return (
       <Dropdown
-        buttonClassName="button button-link dropdown-toggle"
+        buttonClassName="button button-primary-link dropdown-toggle flush-left flush-right"
         dropdownMenuClassName="dropdown-menu"
         dropdownMenuListClassName="dropdown-menu-list"
         onItemSelection={this.handlePackageVersionChange}
@@ -399,7 +409,11 @@ class PackageDetailTab extends mixin(StoreMixin) {
           <div className="modal-body">
             <div className="horizontal-center">
               <span className="text-success">
-                <Icon id="circle-check" size="large" color="green" />
+                <Icon
+                  shape={SystemIcons.CircleCheck}
+                  size={iconSizeL}
+                  color={green}
+                />
               </span>
               <Trans render="h2" className="short-top short-bottom">
                 Success!
@@ -517,8 +531,11 @@ class PackageDetailTab extends mixin(StoreMixin) {
               </div>
               {!state.isLoadingSelectedVersion && (
                 <div className="media-object-item media-object-item-grow ">
-                  <div className="flex flex-direction-left-to-right">
-                    <h1 className="short flush-top">{name}</h1>
+                  <h1 className="short flush-top flush-bottom">{name}</h1>
+                  <div className="flex flex-align-items-center">
+                    <span className="package-version-label">
+                      <Trans>Version</Trans>:
+                    </span>
                     {this.getPackageVersionsDropdown()}
                   </div>
                   <div className="row">

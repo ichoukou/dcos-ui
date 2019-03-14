@@ -40,7 +40,9 @@ pipeline {
         sh "git fetch"
         sh "git checkout \"\$([ -z \"\$CHANGE_BRANCH\" ] && echo \$BRANCH_NAME || echo \$CHANGE_BRANCH )\""
 
-        sh "npm run validate-tests"
+        // jenkins seem to have this variable set for no reason, explicitly removing it…
+        sh "npm config delete externalplugins"
+        sh "npm run test:validate"
         sh "npm --unsafe-perm ci"
         sh "npm run build"
       }
@@ -55,7 +57,7 @@ pipeline {
       }
 
       steps {
-        sh 'npm run commitlint -- --from "${CHANGE_TARGET}"'
+        sh 'npm run lint:commits -- --from "${CHANGE_TARGET}"'
       }
     }
 
@@ -72,7 +74,7 @@ pipeline {
             ]) {
               sh "./scripts/ci/createDatadogConfig.sh"
             }
-            sh "npm run integration-tests"
+            sh "npm run test:integration"
           }
 
           post {
@@ -120,7 +122,7 @@ pipeline {
           usernamePassword(credentialsId: "a7ac7f84-64ea-4483-8e66-bb204484e58f", passwordVariable: "GIT_PASSWORD", usernameVariable: "GIT_USER"), // update-dcos-repo
           usernamePassword(credentialsId: "6c147571-7145-410a-bf9c-4eec462fbe02", passwordVariable: "JIRA_PASS", usernameVariable: "JIRA_USER") // semantic-release-jira
         ]) {
-          sh "npx semantic-release"
+          sh "npm run release"
         }
       }
     }

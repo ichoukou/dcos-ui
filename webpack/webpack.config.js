@@ -1,14 +1,37 @@
-const { DefinePlugin } = require("webpack");
+const { DefinePlugin, EnvironmentPlugin } = require("webpack");
 const path = require("path");
 const LessColorLighten = require("less-color-lighten");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
 
 function requireAll(array) {
   // https://stackoverflow.com/a/34574630/1559386
   return array.map(require.resolve);
 }
 
+const devServer = {
+  open: false,
+  overlay: true,
+  port: 4200,
+  proxy: require("./proxy.dev.js")
+};
+
+if (process.env.NODE_ENV === "testing") {
+  // Cypress constantly saves fixture files, which causes webpack to detect
+  // a filechange and rebuild the application. The problem with this is that
+  // when Cypress goes to load the application again, it may not be ready to
+  // be served, which causes the test to fail. This delays rebuilding the
+  // application for a very long time when in a testing environment.
+  const delayTime = 1000 * 60 * 60 * 5;
+  devServer.watchOptions = {
+    aggregateTimeout: delayTime,
+    poll: delayTime
+  };
+  devServer.proxy = {};
+}
+
 module.exports = {
+  devServer,
   entry: "./src/js/index.js",
   output: {
     filename: "[name].[hash].js"
@@ -42,13 +65,12 @@ module.exports = {
   node: {
     fs: "empty" // Jison loader fails otherwise
   },
-  devServer: {
-    open: false,
-    overlay: true,
-    port: 4200,
-    proxy: require("./proxy.dev.js")
-  },
   plugins: [
+    new ForkTsCheckerWebpackPlugin({
+      checkSyntacticErrors: true,
+      useTypescriptIncrementalApi: true
+    }),
+    new EnvironmentPlugin(["NODE_ENV"]),
     new DefinePlugin({
       "process.env.LATER_COV": false
     }),
@@ -79,15 +101,12 @@ module.exports = {
         exclude: /node_modules/,
         use: [
           {
-            loader: "thread-loader"
-          },
-          {
             loader: "babel-loader"
           },
           {
             loader: "ts-loader",
             options: {
-              happyPackMode: true
+              transpileOnly: true
             }
           }
         ]
@@ -96,7 +115,6 @@ module.exports = {
         test: /\.js$/,
         exclude: /node_modules/,
         use: [
-          "thread-loader",
           {
             loader: "babel-loader",
             options: {
