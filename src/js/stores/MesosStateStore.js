@@ -27,7 +27,7 @@ import {
 import MesosStateUtil from "../utils/MesosStateUtil";
 import pipe from "../utils/pipe";
 import { linearBackoff } from "../utils/rxjsUtils";
-import { MesosStreamType } from "../core/MesosStream";
+import { TYPES } from "../types/containerTypes";
 import container from "../container";
 import * as mesosStreamParsers from "./MesosStream/parsers";
 
@@ -88,7 +88,7 @@ class MesosStateStore extends GetSetBaseStore {
   }
 
   subscribe() {
-    const mesosStream = container.get(MesosStreamType);
+    const mesosStream = container.get(TYPES.MesosStream);
     const getMasterRequest = request(
       { type: "GET_MASTER" },
       "/mesos/api/v1?get_master"
