@@ -1,14 +1,18 @@
 import * as React from "react";
-import sort from "array-sort";
 import { Trans } from "@lingui/macro";
+import sort from "array-sort";
 import { Link } from "react-router";
 import { Tooltip } from "reactjs-components";
-import { TextCell } from "@dcos/ui-kit";
 import ipToInt from "ip-to-int";
+import { Icon, TextCell } from "@dcos/ui-kit";
+import { SystemIcons } from "@dcos/ui-kit/dist/packages/icons/dist/system-icons-enum";
+import {
+  greyDark,
+  iconSizeXs
+} from "@dcos/ui-kit/dist/packages/design-tokens/build/js/designTokens";
 
 import Node from "#SRC/js/structs/Node";
-import { SortDirection } from "plugins/nodes/src/js/types/SortDirection";
-import Icon from "#SRC/js/components/Icon";
+import { SortDirection } from "#PLUGINS/nodes/src/js/types/SortDirection";
 
 export function ipRenderer(data: Node): React.ReactNode {
   const nodeID = data.get("id");
@@ -23,12 +27,13 @@ export function ipRenderer(data: Node): React.ReactNode {
               anchor="start"
               content={<Trans render="span">Connection to node lost</Trans>}
             >
-              <Icon
-                className="icon-alert icon-margin-right"
-                color="neutral"
-                id="yield"
-                size="mini"
-              />
+              <span className="icon-alert icon-margin-right">
+                <Icon
+                  color={greyDark}
+                  shape={SystemIcons.Yield}
+                  size={iconSizeXs}
+                />
+              </span>
               {headline}
             </Tooltip>
           </span>

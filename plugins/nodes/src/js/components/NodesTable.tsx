@@ -1,5 +1,10 @@
 import * as React from "react";
-import { Table, Column, SortableHeaderCell } from "@dcos/ui-kit/dist/packages";
+import {
+  Table,
+  Column,
+  SortableHeaderCell,
+  HeaderCell
+} from "@dcos/ui-kit/dist/packages";
 import { Trans } from "@lingui/macro";
 
 import NodesList from "#SRC/js/structs/NodesList";
@@ -29,6 +34,8 @@ import {
   spacingRenderer
 } from "../columns/NodesTableSpacingColumn";
 
+import PublicIPColumn from "../columns/NodesTablePublicIPColumn";
+
 interface NodesTableProps {
   hosts: NodesList;
   nodeHealthResponse: boolean;
@@ -36,7 +43,7 @@ interface NodesTableProps {
 }
 
 interface NodesTableState {
-  data: Node[];
+  data: Node[] | null;
   sortDirection: SortDirection;
   sortColumn: string;
 }
@@ -50,11 +57,11 @@ export default class NodesTable extends React.Component<
   // This workaround will be removed in DCOS-39332
   private regionRenderer: (data: Node) => React.ReactNode;
 
-  constructor() {
-    super();
+  constructor(props: Readonly<NodesTableProps>) {
+    super(props);
 
     this.state = {
-      data: [],
+      data: null,
       sortColumn: "health",
       sortDirection: "ASC"
     };
@@ -99,19 +106,26 @@ export default class NodesTable extends React.Component<
     currentSortColumn?: string
   ): NodesTableState {
     const copiedData = data.slice();
-
     if (
       sortDirection === currentSortDirection &&
       sortColumn === currentSortColumn
     ) {
-      return { data: copiedData, sortDirection, sortColumn };
+      return {
+        data: copiedData,
+        sortDirection,
+        sortColumn
+      };
     }
 
     if (
       sortDirection !== currentSortDirection &&
       sortColumn === currentSortColumn
     ) {
-      return { data: copiedData.reverse(), sortDirection, sortColumn };
+      return {
+        data: copiedData.reverse(),
+        sortDirection,
+        sortColumn
+      };
     }
 
     const sortFunction = this.retrieveSortFunction(sortColumn);
@@ -129,15 +143,17 @@ export default class NodesTable extends React.Component<
         ? "DESC"
         : "ASC";
 
-    this.setState(
-      this.updateData(
-        this.state.data,
-        columnName,
-        toggledDirection,
-        this.state.sortDirection,
-        this.state.sortColumn
-      )
-    );
+    if (this.state.data !== null) {
+      this.setState(
+        this.updateData(
+          this.state.data,
+          columnName,
+          toggledDirection,
+          this.state.sortDirection,
+          this.state.sortColumn
+        )
+      );
+    }
   }
 
   componentWillReceiveProps(nextProps: NodesTableProps): void {
@@ -153,7 +169,7 @@ export default class NodesTable extends React.Component<
   render() {
     const { data, sortColumn, sortDirection } = this.state;
 
-    if (data.length === 0) {
+    if (data === null) {
       return <Loader />;
     }
 
@@ -180,6 +196,15 @@ export default class NodesTable extends React.Component<
               />
             }
             cellRenderer={healthRenderer}
+          />
+
+          <Column
+            header={
+              <HeaderCell>
+                <Trans>Public IP</Trans>
+              </HeaderCell>
+            }
+            cellRenderer={PublicIPColumn}
           />
 
           <Column

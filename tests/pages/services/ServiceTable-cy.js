@@ -5,7 +5,7 @@ describe("Service Table", function() {
     cy.get(".service-table")
       .contains(serviceName)
       .closest("tr")
-      .find(".dropdown")
+      .find(".service-table-column-actions")
       .click();
   }
 
@@ -31,7 +31,8 @@ describe("Service Table", function() {
       cy.route({
         method: "DELETE",
         url: /marathon\/v2\/apps\/\/sleep/,
-        response: []
+        response: [],
+        delay: SERVER_RESPONSE_DELAY
       });
       cy.get(".modal-small .button-danger").should("have.class", "disabled");
     });
@@ -95,7 +96,8 @@ describe("Service Table", function() {
       cy.route({
         method: "PUT",
         url: /marathon\/v2\/apps\/\/sleep/,
-        response: []
+        response: [],
+        delay: SERVER_RESPONSE_DELAY
       });
 
       openDropdown("sleep");

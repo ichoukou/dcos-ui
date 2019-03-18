@@ -22,6 +22,7 @@ import {
 import gql from "graphql-tag";
 import Loader from "#SRC/js/components/Loader";
 import RequestErrorMsg from "#SRC/js/components/RequestErrorMsg";
+// @ts-ignore
 import MesosStateStore from "#SRC/js/stores/MesosStateStore";
 
 import {
@@ -88,7 +89,7 @@ const SDKPlans = componentFromStream(props$ => {
     service: { getName: () => string };
   }>).pipe(
     map((props: { service: { getName: () => string } }) => {
-      const tasks = MesosStateStore.getTasksByService(props.service);
+      const tasks = (MesosStateStore as any).getTasksByService(props.service);
       const serviceName = props.service.getName();
       const schedulerTask = tasks.find(
         (task: { name: string }) => task.name === serviceName

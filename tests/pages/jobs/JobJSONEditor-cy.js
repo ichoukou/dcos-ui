@@ -18,10 +18,14 @@ describe("Job JSON Editor", function() {
     cy.get(".button.button-primary-link.button-narrow").click();
 
     // Wait for the 'New Job' dialog to appear
-    cy.get(".modal-header").contains("New Job").should("exist");
+    cy.get(".modal-header")
+      .contains("New Job")
+      .should("exist");
 
     // Fill-in the input elements
-    cy.root().getFormGroupInputFor("ID *").type(`{selectall}${fullJobName}`);
+    cy.root()
+      .getFormGroupInputFor("Job ID *")
+      .type(`{selectall}${fullJobName}`);
     //
     // TODO: Due to a bug in cypress you cannot type values with dots
     // cy
@@ -29,28 +33,37 @@ describe("Job JSON Editor", function() {
     //   .getFormGroupInputFor('CPUs')
     //   .type('{selectall}0.1');
     //
-    cy.root().getFormGroupInputFor("Mem (MiB)").type("{selectall}32");
-    cy.root().getFormGroupInputFor("Command").type(cmdline);
+    cy.root()
+      .getFormGroupInputFor("Mem (MiB) *")
+      .type("{selectall}32");
+    cy.root()
+      .getFormGroupInputFor("Command *")
+      .type(cmdline);
 
     // Check JSON mode
-    cy.contains("JSON mode").click();
+    cy.contains("JSON Editor").click();
 
     // Check contents of the JSON editor
-    cy.get("#brace-editor").contents().asJson().should("deep.equal", [
-      {
-        id: fullJobName,
-        run: {
-          cpus: 0.01,
-          mem: 32,
-          disk: 0,
-          cmd: cmdline
-        },
-        schedules: []
-      }
-    ]);
+    cy.get("#brace-editor")
+      .contents()
+      .asJson()
+      .should("deep.equal", [
+        {
+          job: {
+            id: fullJobName,
+            description: "",
+            run: {
+              cpus: 1,
+              mem: 32,
+              disk: 0,
+              cmd: cmdline
+            }
+          }
+        }
+      ]);
   });
 
-  it("renders proper JSON for a job with docker config", function() {
+  it("renders proper JSON for a job with default container image", function() {
     const jobName = "job-with-docker-config";
     const fullJobName = `${Cypress.env("TEST_UUID")}.${jobName}`;
     const cmdline = "while true; do echo 'test' ; sleep 100 ; done";
@@ -60,223 +73,572 @@ describe("Job JSON Editor", function() {
     cy.get(".button.button-primary-link.button-narrow").click();
 
     // Wait for the 'New Job' dialog to appear
-    cy.get(".modal-header").contains("New Job").should("exist");
+    cy.get(".modal-header")
+      .contains("New Job")
+      .should("exist");
 
     // Fill-in the input elements
-    cy.root().getFormGroupInputFor("ID *").type(`{selectall}${fullJobName}`);
-    //
-    // TODO: Due to a bug in cypress you cannot type values with dots
-    // cy
-    //   .root()
-    //   .getFormGroupInputFor('CPUs')
-    //   .type('{selectall}0.5');
-    //
-    cy.root().getFormGroupInputFor("Mem (MiB)").type("{selectall}32");
-    cy.root().getFormGroupInputFor("Command").type(cmdline);
+    cy.root()
+      .getFormGroupInputFor("Job ID *")
+      .type(`{selectall}${fullJobName}`);
+    cy.root()
+      .getFormGroupInputFor("Mem (MiB) *")
+      .type("{selectall}32");
+    cy.root()
+      .getFormGroupInputFor("Command *")
+      .type(cmdline);
 
-    // Select `Docker Container`
-    cy
-      .root()
-      .get(".multiple-form-modal-sidebar-menu-item")
-      .contains("Docker Container")
+    cy.root()
+      .get("label")
+      .contains("Container Image")
       .click();
 
     // Fill-in image
-    cy.root().getFormGroupInputFor("Image").type("python:3");
+    cy.root()
+      .getFormGroupInputFor("Container Image *")
+      .type("nginx");
 
-    // Select `Docker Parameters`
-    cy
-      .root()
-      .get(".multiple-form-modal-sidebar-menu-item")
-      .contains("Docker Parameters")
-      .click();
-
-    // Fill-in the first param
-    cy.root().getFormGroupInputFor("Parameter Name").eq(0).type("cap-drop");
-    cy.root().getFormGroupInputFor("Parameter Value").eq(0).type("ALL");
-
-    // Add an additional param
-    cy.get(".clickable").contains("Add Parameter").click({ force: true });
-
-    // Fill-in the second param
-    cy.root().getFormGroupInputFor("Parameter Name").eq(1).type("cap-add");
-    cy.root().getFormGroupInputFor("Parameter Value").eq(1).type("SYSLOG");
+    // Fill-in GPUs (should be enabled)
+    cy.root()
+      .getFormGroupInputFor("GPUs")
+      .type("{selectall}1");
 
     // Check JSON mode
-    cy.contains("JSON mode").click();
+    cy.contains("JSON Editor").click();
 
     // Check contents of the JSON editor
-    cy.get("#brace-editor").contents().asJson().should("deep.equal", [
-      {
-        id: fullJobName,
-        run: {
-          cpus: 0.01,
-          mem: 32,
-          disk: 0,
-          cmd: cmdline,
-          docker: {
-            image: "python:3",
-            privileged: false,
-            parameters: [
-              {
-                "key": "cap-drop",
-                "value": "ALL"
-              },
-              {
-                "key": "cap-add",
-                "value": "SYSLOG"
+    cy.get("#brace-editor")
+      .contents()
+      .asJson()
+      .should("deep.equal", [
+        {
+          job: {
+            id: fullJobName,
+            description: "",
+            run: {
+              cpus: 1,
+              mem: 32,
+              disk: 0,
+              gpus: 1,
+              cmd: cmdline,
+              ucr: {
+                image: {
+                  id: "nginx",
+                  kind: "docker"
+                }
               }
-            ]
+            }
           }
-        },
-        schedules: []
-      }
-    ]);
+        }
+      ]);
   });
 
-  it("renders proper JSON for a job with labels", function() {
-    const jobName = "job-with-labels";
+  it("shows disabled inputs in Container tab when Command Only is chosen", () => {
+    // Click 'Create a job'
+    // Note: The current group contains the previous job
+    cy.get(".button.button-primary-link.button-narrow").click();
+
+    cy.get(".menu-tabbed-item")
+      .contains("Container")
+      .click();
+
+    // Ensure disabled banner is shown
+    cy.contains(
+      "Container options disabled. Select Container Image in general tab to enable."
+    );
+
+    cy.get("label")
+      .contains("Universal Container Runtime")
+      .get("input")
+      .should("be.disabled");
+
+    cy.get("label")
+      .contains("Docker Engine")
+      .get("input")
+      .should("be.disabled");
+
+    cy.get("label")
+      .contains("Force Pull Image On Launch")
+      .get("input")
+      .should("be.disabled");
+  });
+
+  it("renders proper JSON for a job using UCR with advanced options", () => {
+    const jobName = "job-with-ucr-config";
     const fullJobName = `${Cypress.env("TEST_UUID")}.${jobName}`;
     const cmdline = "while true; do echo 'test' ; sleep 100 ; done";
 
     // Click 'Create a job'
-    // Note: The current group contains the previous jobs
+    // Note: The current group contains the previous job
     cy.get(".button.button-primary-link.button-narrow").click();
 
     // Wait for the 'New Job' dialog to appear
-    // Note: The current group contains the previous two jobs
-    cy.get(".modal-header").contains("New Job").should("exist");
+    cy.get(".modal-header")
+      .contains("New Job")
+      .should("exist");
 
     // Fill-in the input elements
-    cy.root().getFormGroupInputFor("ID *").type(`{selectall}${fullJobName}`);
-    //
-    // TODO: Due to a bug in cypress you cannot type values with dots
-    // cy
-    //   .root()
-    //   .getFormGroupInputFor('CPUs')
-    //   .type('{selectall}0.5');
-    //
-    cy.root().getFormGroupInputFor("Mem (MiB)").type("{selectall}32");
-    cy.root().getFormGroupInputFor("Command").type(cmdline);
+    cy.root()
+      .getFormGroupInputFor("Job ID *")
+      .type(`{selectall}${fullJobName}`);
+    cy.root()
+      .getFormGroupInputFor("Mem (MiB) *")
+      .type("{selectall}32");
+    cy.root()
+      .getFormGroupInputFor("Command *")
+      .type(cmdline);
 
-    // Select `Labels`
-    cy
-      .root()
-      .get(".multiple-form-modal-sidebar-menu-item")
-      .contains("Labels")
+    cy.root()
+      .get("label")
+      .contains("Container Image")
       .click();
 
-    // Fill-in the first label
-    cy.root().getFormGroupInputFor("Label Name").eq(0).type("camelCase");
-    cy.root().getFormGroupInputFor("Label Value").eq(0).type("test");
+    // Fill-in image
+    cy.root()
+      .getFormGroupInputFor("Container Image *")
+      .type("nginx");
 
-    // Add an additional label
-    cy.get(".clickable").contains("Add Label").click({ force: true });
+    // Fill-in GPUs (should be enabled)
+    cy.root()
+      .getFormGroupInputFor("GPUs")
+      .type("{selectall}1");
 
-    // Fill-in the second label
-    cy.root().getFormGroupInputFor("Label Name").eq(1).type("snake_case");
-    cy.root().getFormGroupInputFor("Label Value").eq(1).type("test");
+    cy.get(".menu-tabbed-item")
+      .contains("Container")
+      .click();
 
-    // Add an additional label
-    cy.get(".clickable").contains("Add Label").click({ force: true });
+    cy.root()
+      .get("label")
+      .contains("Force Pull Image On Launch")
+      .click();
 
-    // Fill-in the third label
-    cy.root().getFormGroupInputFor("Label Name").eq(2).type("lowercase");
-    cy.root().getFormGroupInputFor("Label Value").eq(2).type("test");
+    cy.get(".menu-tabbed-item")
+      .contains("Run Config")
+      .click();
 
-    // Add an additional label
-    cy.get(".clickable").contains("Add Label").click({ force: true });
+    cy.root()
+      .getFormGroupInputFor("Max Launch Delay")
+      .type("{selectall}1");
 
-    // Fill-in the fourth label
-    cy.root().getFormGroupInputFor("Label Name").eq(3).type("UPPERCASE");
-    cy.root().getFormGroupInputFor("Label Value").eq(3).type("test");
+    cy.root()
+      .getFormGroupInputFor("Kill Grace Period")
+      .type("{selectall}2");
+
+    cy.root()
+      .getFormGroupInputFor("Username")
+      .type("{selectall}user1");
+
+    // Add Artifact
+
+    // Restart Job
+
+    cy.root()
+      .getFormGroupInputFor("Retry Time")
+      .type("{selectall}3");
+
+    // Add labels
 
     // Check JSON mode
-    cy.contains("JSON mode").click();
+    cy.contains("JSON Editor").click();
 
     // Check contents of the JSON editor
-    cy.get("#brace-editor").contents().asJson().should("deep.equal", [
-      {
-        id: fullJobName,
-        run: {
-          cpus: 0.01,
-          mem: 32,
-          disk: 0,
-          cmd: cmdline
-        },
-        labels: {
-          camelCase: "test",
-          snake_case: "test",
-          lowercase: "test",
-          UPPERCASE: "test"
-        },
-        schedules: []
-      }
-    ]);
+    cy.get("#brace-editor")
+      .contents()
+      .asJson()
+      .should("deep.equal", [
+        {
+          job: {
+            id: fullJobName,
+            description: "",
+            run: {
+              cpus: 1,
+              mem: 32,
+              disk: 0,
+              gpus: 1,
+              cmd: cmdline,
+              ucr: {
+                image: {
+                  id: "nginx",
+                  kind: "docker",
+                  forcePull: true
+                }
+              },
+              maxLaunchDelay: 1,
+              taskKillGracePeriodSeconds: 2,
+              user: "user1",
+              restart: {
+                policy: "NEVER",
+                activeDeadlineSeconds: 3
+              }
+            }
+          }
+        }
+      ]);
   });
 
-  it("renders the proper JSON for a job with schedule", function() {
+  it("renders proper JSON for a job using Docker with advanced options", () => {
+    const jobName = "job-with-docker-config";
+    const fullJobName = `${Cypress.env("TEST_UUID")}.${jobName}`;
+    const cmdline = "while true; do echo 'test' ; sleep 100 ; done";
+
+    // Click 'Create a job'
+    // Note: The current group contains the previous job
+    cy.get(".button.button-primary-link.button-narrow").click();
+
+    // Wait for the 'New Job' dialog to appear
+    cy.get(".modal-header")
+      .contains("New Job")
+      .should("exist");
+
+    // Fill-in the input elements
+    cy.root()
+      .getFormGroupInputFor("Job ID *")
+      .type(`{selectall}${fullJobName}`);
+    cy.root()
+      .getFormGroupInputFor("Mem (MiB) *")
+      .type("{selectall}32");
+    cy.root()
+      .getFormGroupInputFor("Command *")
+      .type(cmdline);
+
+    cy.root()
+      .get("label")
+      .contains("Container Image")
+      .click();
+
+    // Fill-in image
+    cy.root()
+      .getFormGroupInputFor("Container Image *")
+      .type("nginx");
+
+    cy.get(".menu-tabbed-item")
+      .contains("Container")
+      .click();
+
+    cy.root()
+      .get("label")
+      .contains("Docker Engine")
+      .click();
+
+    cy.root()
+      .get("label")
+      .contains("Force Pull Image On Launch")
+      .click();
+
+    cy.root()
+      .get("label")
+      .contains("Grant Runtime Privileges")
+      .click();
+
+    // Check JSON mode
+    cy.contains("JSON Editor").click();
+
+    // Check contents of the JSON editor
+    cy.get("#brace-editor")
+      .contents()
+      .asJson()
+      .should("deep.equal", [
+        {
+          job: {
+            id: fullJobName,
+            description: "",
+            run: {
+              cpus: 1,
+              mem: 32,
+              disk: 0,
+              cmd: cmdline,
+              docker: {
+                image: "nginx",
+                forcePullImage: true,
+                privileged: true
+              }
+            }
+          }
+        }
+      ]);
+  });
+
+  it("renders proper JSON for a job using Docker with parameters", () => {
+    const jobName = "job-with-docker-config";
+    const fullJobName = `${Cypress.env("TEST_UUID")}.${jobName}`;
+    const cmdline = "while true; do echo 'test' ; sleep 100 ; done";
+    const dockerParam = {
+      key: "key",
+      value: "value"
+    };
+
+    // Click 'Create a job'
+    // Note: The current group contains the previous job
+    cy.get(".button.button-primary-link.button-narrow").click();
+
+    // Wait for the 'New Job' dialog to appear
+    cy.get(".modal-header")
+      .contains("New Job")
+      .should("exist");
+
+    // Fill-in the input elements
+    cy.root()
+      .getFormGroupInputFor("Job ID *")
+      .type(`{selectall}${fullJobName}`);
+    cy.root()
+      .getFormGroupInputFor("Mem (MiB) *")
+      .type("{selectall}32");
+    cy.root()
+      .getFormGroupInputFor("Command *")
+      .type(cmdline);
+
+    cy.root()
+      .get("label")
+      .contains("Container Image")
+      .click();
+
+    // Fill-in image
+    cy.root()
+      .getFormGroupInputFor("Container Image *")
+      .type("nginx");
+
+    cy.get(".menu-tabbed-item")
+      .contains("Container")
+      .click();
+
+    cy.root()
+      .get("label")
+      .contains("Docker Engine")
+      .click();
+
+    cy.root()
+      .get("label")
+      .contains("Force Pull Image On Launch")
+      .click();
+
+    cy.root()
+      .get("label")
+      .contains("Grant Runtime Privileges")
+      .click();
+
+    cy.root()
+      .get(".button")
+      .contains("Add Parameter")
+      .click();
+
+    cy.root()
+      .getFormGroupInputFor("Parameter Name")
+      .type(dockerParam.key);
+
+    cy.root()
+      .getFormGroupInputFor("Parameter Value")
+      .type(dockerParam.value);
+
+    // Check JSON mode
+    cy.contains("JSON Editor").click();
+
+    // Check contents of the JSON editor
+    cy.get("#brace-editor")
+      .contents()
+      .asJson()
+      .should("deep.equal", [
+        {
+          job: {
+            id: fullJobName,
+            description: "",
+            run: {
+              cpus: 1,
+              mem: 32,
+              disk: 0,
+              cmd: cmdline,
+              docker: {
+                image: "nginx",
+                forcePullImage: true,
+                privileged: true,
+                parameters: [dockerParam]
+              }
+            }
+          }
+        }
+      ]);
+  });
+
+  it("renders proper JSON for a job using Docker with args", () => {
+    const jobName = "job-with-docker-config";
+    const fullJobName = `${Cypress.env("TEST_UUID")}.${jobName}`;
+    const cmdline = "while true; do echo 'test' ; sleep 100 ; done";
+    const arg = "arg";
+
+    // Click 'Create a job'
+    // Note: The current group contains the previous job
+    cy.get(".button.button-primary-link.button-narrow").click();
+
+    // Wait for the 'New Job' dialog to appear
+    cy.get(".modal-header")
+      .contains("New Job")
+      .should("exist");
+
+    // Fill-in the input elements
+    cy.root()
+      .getFormGroupInputFor("Job ID *")
+      .type(`{selectall}${fullJobName}`);
+    cy.root()
+      .getFormGroupInputFor("Mem (MiB) *")
+      .type("{selectall}32");
+    cy.root()
+      .getFormGroupInputFor("Command *")
+      .type(cmdline);
+
+    cy.root()
+      .get("label")
+      .contains("Container Image")
+      .click();
+
+    // Fill-in image
+    cy.root()
+      .getFormGroupInputFor("Container Image *")
+      .type("nginx");
+
+    cy.get(".menu-tabbed-item")
+      .contains("Container")
+      .click();
+
+    cy.root()
+      .get("label")
+      .contains("Docker Engine")
+      .click();
+
+    cy.root()
+      .get("label")
+      .contains("Force Pull Image On Launch")
+      .click();
+
+    cy.root()
+      .get("label")
+      .contains("Grant Runtime Privileges")
+      .click();
+
+    cy.root()
+      .get(".button")
+      .contains("Add Arg")
+      .click();
+
+    cy.root()
+      .getFormGroupInputFor("Arg")
+      .type(arg);
+
+    // Check JSON mode
+    cy.contains("JSON Editor").click();
+
+    // Check contents of the JSON editor
+    cy.get("#brace-editor")
+      .contents()
+      .asJson()
+      .should("deep.equal", [
+        {
+          job: {
+            id: fullJobName,
+            description: "",
+            run: {
+              args: [arg],
+              cpus: 1,
+              mem: 32,
+              disk: 0,
+              cmd: cmdline,
+              docker: {
+                image: "nginx",
+                forcePullImage: true,
+                privileged: true
+              }
+            }
+          }
+        }
+      ]);
+  });
+
+  it("renders proper JSON for a job with a schedule", () => {
     const jobName = "job-with-schedule";
     const fullJobName = `${Cypress.env("TEST_UUID")}.${jobName}`;
     const cmdline = "while true; do echo 'test' ; sleep 100 ; done";
+    const scheduleId = "schedule-id";
+    const cron = "0 0 4 * *";
+    const startingDeadline = 1;
+    const timezone = "UTC";
 
     // Click 'Create a job'
-    // Note: The current group contains the previous jobs
+    // Note: The current group contains the previous job
     cy.get(".button.button-primary-link.button-narrow").click();
 
     // Wait for the 'New Job' dialog to appear
-    cy.get(".modal-header").contains("New Job").should("exist");
+    cy.get(".modal-header")
+      .contains("New Job")
+      .should("exist");
 
     // Fill-in the input elements
-    cy.root().getFormGroupInputFor("ID *").type(`{selectall}${fullJobName}`);
-    //
-    // TODO: Due to a bug in cypress you cannot type values with dots
-    // cy
-    //   .root()
-    //   .getFormGroupInputFor('CPUs')
-    //   .type('{selectall}0.1');
-    //
-    cy.root().getFormGroupInputFor("Mem (MiB)").type("{selectall}32");
-    cy.root().getFormGroupInputFor("Command").type(cmdline);
+    cy.root()
+      .getFormGroupInputFor("Job ID *")
+      .type(`{selectall}${fullJobName}`);
+    cy.root()
+      .getFormGroupInputFor("Mem (MiB) *")
+      .type("{selectall}32");
+    cy.root()
+      .getFormGroupInputFor("Command *")
+      .type(cmdline);
 
-    // Select `Schedule`
-    cy
-      .root()
-      .get(".multiple-form-modal-sidebar-menu-item")
+    cy.get(".menu-tabbed-item")
       .contains("Schedule")
       .click();
 
-    // Check 'Run on a schedule'
-    cy.contains("Run on a schedule").click();
+    cy.root()
+      .get("label")
+      .contains("Enable schedule")
+      .click();
 
-    // Specify a schedule
-    cy.root().getFormGroupInputFor("Cron Schedule *").type("* * * * *");
+    // Toggle Concurrency policy
+    cy.root()
+      .get("label")
+      .contains("Allow")
+      .click();
 
-    // Enable schedule
-    cy.contains("Enable").click();
+    cy.root()
+      .getFormGroupInputFor("Schedule ID *")
+      .type(`{selectall}${scheduleId}`);
+
+    cy.root()
+      .getFormGroupInputFor("CRON Schedule *")
+      .type(`{selectall}${cron}`);
+
+    cy.root()
+      .getFormGroupInputFor("Time Zone")
+      .type(`{selectall}${timezone}`);
+
+    cy.root()
+      .getFormGroupInputFor("Starting Deadline")
+      .type(`{selectall}${startingDeadline}`);
 
     // Check JSON mode
-    cy.contains("JSON mode").click();
+    cy.contains("JSON Editor").click();
 
     // Check contents of the JSON editor
-    cy.get("#brace-editor").contents().asJson().should("deep.equal", [
-      {
-        id: fullJobName,
-        run: {
-          cpus: 0.01,
-          mem: 32,
-          disk: 0,
-          cmd: cmdline
-        },
-        schedules: [
-          {
-            id: "default",
+    cy.get("#brace-editor")
+      .contents()
+      .asJson()
+      .should("deep.equal", [
+        {
+          job: {
+            id: fullJobName,
+            description: "",
+            run: {
+              cpus: 1,
+              mem: 32,
+              disk: 0,
+              cmd: cmdline
+            }
+          },
+          schedule: {
             enabled: true,
-            cron: "* * * * *",
+            startingDeadlineSeconds: startingDeadline,
+            id: scheduleId,
+            timezone,
+            cron,
             concurrencyPolicy: "ALLOW"
           }
-        ]
-      }
-    ]);
+        }
+      ]);
   });
 });
