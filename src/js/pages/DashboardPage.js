@@ -28,6 +28,7 @@ import TasksChart from "../components/charts/TasksChart";
 import SidebarActions from "../events/SidebarActions";
 import UnitHealthStore from "../stores/UnitHealthStore";
 import DashboardHeadings from "../constants/DashboardHeadings";
+import HealthUnitsList from "../structs/HealthUnitsList";
 
 function getMesosState() {
   const states = MesosSummaryStore.get("states");
@@ -91,6 +92,13 @@ var DashboardPage = createReactClass({
     };
   },
 
+  getInitialState() {
+    return {
+      dcosServices: [],
+      unitHealthUnits: new HealthUnitsList({ items: [] })
+    };
+  },
+
   componentWillMount() {
     this.store_listeners = [
       { name: "dcos", events: ["change"], suppressUpdate: true },
@@ -98,7 +106,7 @@ var DashboardPage = createReactClass({
       {
         name: "unitHealth",
         events: ["success", "error"],
-        suppressUpdate: false
+        suppressUpdate: true
       }
     ];
 
@@ -117,8 +125,26 @@ var DashboardPage = createReactClass({
     this.internalStorage_update(getMesosState());
   },
 
+  onDcosStoreChange() {
+    this.setState({
+      dcosServices: DCOSStore.serviceTree.getServices().getItems()
+    });
+  },
+
+  onUnitHealthStoreSuccess() {
+    this.setState({
+      unitHealthUnits: UnitHealthStore.getUnits()
+    });
+  },
+
+  onUnitHealthStoreError() {
+    this.setState({
+      unitHealthUnits: UnitHealthStore.getUnits()
+    });
+  },
+
   getServicesList() {
-    const services = DCOSStore.serviceTree.getServices().getItems();
+    const services = this.state.dcosServices;
 
     const sortedServices = services.sort(function(service, other) {
       const health = service.getHealth();
@@ -131,7 +157,7 @@ var DashboardPage = createReactClass({
   },
 
   getUnits() {
-    return UnitHealthStore.getUnits();
+    return this.state.unitHealthUnits;
   },
 
   getViewAllComponentsButton() {
@@ -155,7 +181,7 @@ var DashboardPage = createReactClass({
   },
 
   getViewAllServicesBtn() {
-    let servicesCount = DCOSStore.serviceTree.getServices().getItems().length;
+    let servicesCount = this.state.dcosServices.length;
     if (!servicesCount) {
       return null;
     }
