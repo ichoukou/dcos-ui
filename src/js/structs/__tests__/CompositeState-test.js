@@ -1,6 +1,11 @@
 const CompositeState = require("../CompositeState");
 const NodesList = require("../NodesList");
 
+const Fixtures = {
+  addStateData: require("../__fixtures__/data.json"),
+  addStateThisData: require("../__fixtures__/thisData.json")
+};
+
 describe("CompositeState", function() {
   beforeEach(function() {
     CompositeState.constructor({});
@@ -294,6 +299,45 @@ describe("CompositeState", function() {
       var nodesList = CompositeState.getNodesList();
 
       expect(nodesList instanceof NodesList).toEqual(true);
+    });
+  });
+});
+
+expect.extend({
+  toBeOnAverageFasterThan(fn, time, runs = 100) {
+    const upperBorderForAllRuns = time * runs;
+    const start = performance.now();
+    for (let i = 0; i < runs; i++) {
+      fn();
+    }
+    const end = performance.now();
+
+    const runTime = end - start;
+    const pass = runTime < upperBorderForAllRuns;
+    const message = pass
+      ? "function run was in time"
+      : "function run took too long";
+
+    console.log("time", runTime);
+
+    return { pass, message, actual: runTime };
+  }
+});
+
+// TODO: think about introducing benchmark.js as a 10-15 min spike
+describe("Performance", function() {
+  describe("addState", function() {
+    it.only("does not exceed a certain runtime", function() {
+      expect(() => {
+        CompositeState.constructor({
+          data: null
+        });
+        CompositeState.constructor({
+          data: Fixtures.addStateThisData
+        });
+
+        CompositeState.addState(Fixtures.addStateData);
+      }).toBeOnAverageFasterThan(1);
     });
   });
 });
