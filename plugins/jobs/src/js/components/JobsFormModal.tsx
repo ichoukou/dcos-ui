@@ -2,7 +2,7 @@ import { Trans, t } from "@lingui/macro";
 import { withI18n, i18nMark } from "@lingui/react";
 import * as React from "react";
 import gql from "graphql-tag";
-import { graphqlObservable } from "@dcos/data-service";
+import { DataLayerType, DataLayer } from "@extension-kid/data-layer";
 import { take } from "rxjs/operators";
 //@ts-ignore
 import { Confirm } from "reactjs-components";
@@ -17,6 +17,7 @@ import DataValidatorUtil from "#SRC/js/utils/DataValidatorUtil";
 import ModalHeading from "#SRC/js/components/modals/ModalHeading";
 import ToggleButton from "#SRC/js/components/ToggleButton";
 import { deepCopy } from "#SRC/js/utils/Util";
+import container from "#SRC/js/container";
 
 import {
   getDefaultJobSpec,
@@ -32,8 +33,10 @@ import {
 } from "./form/helpers/JobFormData";
 import { JobResponse } from "src/js/events/MetronomeClient";
 import JobForm from "./JobsForm";
-import defaultSchema from "../data/JobModel";
-import { MetronomeSpecValidators } from "./form/helpers/MetronomeJobValidators";
+import {
+  MetronomeSpecValidators,
+  validateFormLabels
+} from "./form/helpers/MetronomeJobValidators";
 import {
   jobSpecToOutputParser,
   removeBlankProperties
@@ -66,6 +69,7 @@ interface JobFormModalState {
   isConfirmOpen: boolean;
 }
 
+const dataLayer = container.get<DataLayer>(DataLayerType);
 const createJobMutation = gql`
   mutation {
     createJob(data: $data) {
@@ -198,7 +202,9 @@ class JobFormModal extends React.Component<
     const { submitFailed, jobSpec } = this.state;
     const newJobSpec = jobFormOutputToSpecReducer(action, jobSpec);
     const validationErrors = submitFailed
-      ? this.validateJobSpec(jobSpecToOutputParser(newJobSpec))
+      ? this.validateJobOutput(jobSpecToOutputParser(newJobSpec)).concat(
+          validateFormLabels(newJobSpec)
+        )
       : [];
     this.setState({ jobSpec: newJobSpec, validationErrors });
   }
@@ -234,12 +240,12 @@ class JobFormModal extends React.Component<
         data: jobOutput,
         existingSchedule: hasSchedule
       };
-      return graphqlObservable(editJobMutation, defaultSchema, editContext);
+      return dataLayer.query(editJobMutation, editContext);
     } else {
       const createContext = {
         data: jobOutput
       };
-      return graphqlObservable(createJobMutation, defaultSchema, createContext);
+      return dataLayer.query(createJobMutation, createContext);
     }
   }
 
@@ -257,7 +263,7 @@ class JobFormModal extends React.Component<
           const path = [prefix].concat(
             // Linter does not like `\` but it is necessary here.
             // tslint:disable-next-line:prettier
-            e.path.split("\/").filter(pathSegment => pathSegment !== "")
+            e.path.split("/").filter(pathSegment => pathSegment !== "")
           );
           return {
             path,
@@ -283,8 +289,14 @@ class JobFormModal extends React.Component<
 
   handleJobRun() {
     const { jobSpec, formJSONErrors } = this.state;
+
+    // labels must be validated separately based on jobSpec, not jobOutput
+    const labelErrors = validateFormLabels(jobSpec);
+
     const jobOutput = removeBlankProperties(jobSpecToOutputParser(jobSpec));
-    const validationErrors = this.validateJobSpec(jobOutput);
+    const validationErrors = this.validateJobOutput(jobOutput).concat(
+      labelErrors
+    );
     const totalErrors = validationErrors.concat(formJSONErrors);
     if (totalErrors.length) {
       this.setState({
@@ -330,7 +342,7 @@ class JobFormModal extends React.Component<
   /**
    * This function returns errors produced by the form validators
    */
-  validateJobSpec(jobOutput: JobOutput) {
+  validateJobOutput(jobOutput: JobOutput) {
     const validationErrors = DataValidatorUtil.validate(
       jobOutput,
       Object.values(MetronomeSpecValidators)
