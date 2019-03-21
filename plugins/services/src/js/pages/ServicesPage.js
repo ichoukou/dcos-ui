@@ -6,6 +6,7 @@ import { StoreMixin } from "mesosphere-shared-reactjs";
 import { Icon } from "@dcos/ui-kit";
 import { ProductIcons } from "@dcos/ui-kit/dist/packages/icons/dist/product-icons-enum";
 import { iconSizeS } from "@dcos/ui-kit/dist/packages/design-tokens/build/js/designTokens";
+import { testA } from "#SRC/js/utils/testerUtils";
 
 import RouterUtil from "#SRC/js/utils/RouterUtil";
 import TabsMixin from "#SRC/js/mixins/TabsMixin";
@@ -79,6 +80,8 @@ var ServicesPage = createReactClass({
   },
 
   render() {
+    testA();
+
     return this.props.children;
   }
 });

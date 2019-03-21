@@ -1,4 +1,10 @@
 {
-  "plugins": ["transform-runtime", "macros"],
-  "presets": ["env", "stage-3", "react"]
+  "plugins": ["transform-runtime", "macros", "syntax-dynamic-import"],
+  "presets": [
+    ["env", {
+      "modules": false
+    }],
+    "stage-3",
+    "react"
+  ]
 }

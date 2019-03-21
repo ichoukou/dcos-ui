@@ -1,8 +1,14 @@
-const { DefinePlugin, EnvironmentPlugin } = require("webpack");
+const {
+  DefinePlugin,
+  EnvironmentPlugin,
+  HashedModuleIdsPlugin
+} = require("webpack");
 const path = require("path");
 const LessColorLighten = require("less-color-lighten");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
+const BundleAnalyzerPlugin = require("webpack-bundle-analyzer")
+  .BundleAnalyzerPlugin;
 
 function requireAll(array) {
   // https://stackoverflow.com/a/34574630/1559386
@@ -34,7 +40,25 @@ module.exports = {
   devServer,
   entry: "./src/js/index.js",
   output: {
-    filename: "[name].[hash].js"
+    filename: "[name].[hash].js",
+    chunkFilename: "[name].[chunkhash].bundle.js"
+  },
+  optimization: {
+    runtimeChunk: "single",
+    splitChunks: {
+      chunks: "all",
+      maxInitialRequests: 3,
+      maxAsyncRequests: 20,
+      cacheGroups: {
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: "vendors",
+          priority: -20
+        }
+      }
+    },
+    providedExports: true,
+    usedExports: true
   },
   resolve: {
     extensions: [".ts", ".tsx", ".js"],
@@ -66,6 +90,7 @@ module.exports = {
     fs: "empty" // Jison loader fails otherwise
   },
   plugins: [
+    new HashedModuleIdsPlugin(),
     new ForkTsCheckerWebpackPlugin({
       checkSyntacticErrors: true,
       useTypescriptIncrementalApi: true
@@ -77,6 +102,10 @@ module.exports = {
     new MiniCssExtractPlugin({
       filename: "[name].[hash].css",
       disable: process.env.NODE_ENV !== "production"
+    }),
+    new BundleAnalyzerPlugin({
+      analyzerMode: "static",
+      generateStatsFile: true
     })
   ],
   module: {
@@ -116,15 +145,19 @@ module.exports = {
         exclude: /node_modules/,
         use: [
           {
-            loader: "babel-loader",
-            options: {
-              cacheDirectory: true,
-              presets: requireAll([
-                "babel-preset-env",
-                "babel-preset-stage-3",
-                "babel-preset-react"
-              ])
-            }
+            loader: "babel-loader"
+            // Un-commenting this will make
+            // all the imports from `testerUtil`
+            // appear to the bundle
+            //
+            // options: {
+            //   cacheDirectory: true,
+            //   presets: requireAll([
+            //     "babel-preset-env",
+            //     "babel-preset-stage-3",
+            //     "babel-preset-react"
+            //   ])
+            // }
           }
         ]
       },
