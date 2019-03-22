@@ -1,14 +1,71 @@
 import { cleanServiceJSON } from "#SRC/js/utils/CleanJSONUtil";
 import { isSDKService } from "#PLUGINS/services/src/js/utils/ServiceUtil";
+import { findNestedPropertyInObject } from "#SRC/js/utils/Util";
 
 import {
   ROUTE_ACCESS_PREFIX,
   FRAMEWORK_ID_VALID_CHARACTERS
 } from "../constants/FrameworkConstants";
 import FrameworkUtil from "../utils/FrameworkUtil";
+import ServiceStatus from "../constants/ServiceStatus";
 
 import Application from "./Application";
 import FrameworkSpec from "./FrameworkSpec";
+
+/**
+ * Status response codes and description
+ * | HTTP Response Code | Priority | Reason                                           |
+ * |--------------------+----------+--------------------------------------------------|
+ * |                418 |        1 | Initializing                                     |
+ * |                200 |        1 | Running/Ready                                    |
+ * |                500 |        1 | Error Creating Service                           |
+ * |                204 |        2 | Deploying:Pending (Awaiting Resources)           |
+ * |                202 |        2 | Deploying:Starting                               |
+ * |                203 |        4 | Recovering: Pending Degraded(Awaiting Resources) |
+ * |                205 |        4 | Degraded (Recovering):Starting                   |
+ * |                206 |        3 | Degraded                                         |
+ * |                420 |        5 | Backing up                                       |
+ * |                421 |        5 | Restoring                                        |
+ * |                426 |        6 | Upgrade / Rollback / Downgrade                   |
+ * |                503 |          | Service Unavailable                              |
+ */
+
+const frameworkStatusHelper = (displayName, key, priority) => ({
+  displayName,
+  key,
+  priority
+});
+
+const FrameworkStatus = {
+  418: frameworkStatusHelper("Initializing", ServiceStatus.DEPLOYING, 1),
+  200: frameworkStatusHelper("Running/Ready", ServiceStatus.RUNNING, 1),
+  500: frameworkStatusHelper(
+    "Error Creating Service",
+    ServiceStatus.DELAYED,
+    1
+  ),
+  204: frameworkStatusHelper("Deploying:Pending", ServiceStatus.DEPLOYING, 2),
+  202: frameworkStatusHelper("Deploying:Starting", ServiceStatus.DEPLOYING, 2),
+  203: frameworkStatusHelper(
+    "Recovering: Pending Degraded",
+    ServiceStatus.RECOVERING,
+    4
+  ),
+  205: frameworkStatusHelper(
+    "Degraded (Recovering):Starting",
+    ServiceStatus.RECOVERING,
+    4
+  ),
+  206: frameworkStatusHelper("Degraded", ServiceStatus.RECOVERING, 3),
+  420: frameworkStatusHelper("Backing up", ServiceStatus.RECOVERING, 5),
+  421: frameworkStatusHelper("Restoring", ServiceStatus.RECOVERING, 5),
+  426: frameworkStatusHelper(
+    "Upgrade / Rollback / Downgrade",
+    ServiceStatus.DEPLOYING,
+    6
+  ),
+  503: frameworkStatusHelper("Service Unavailable", ServiceStatus.STOPPED)
+};
 
 module.exports = class Framework extends Application {
   constructor() {
@@ -64,6 +121,55 @@ module.exports = class Framework extends Application {
     }
 
     return this._spec;
+  }
+
+  getCheckStatus() {
+    const checkStatus = this.get("tasks").reduce((acc, cur) => {
+      if (cur.checkResult != null) {
+        const curStatusCode = findNestedPropertyInObject(
+          cur,
+          "checkResult.http.statusCode"
+        );
+        const accStatusCode =
+          findNestedPropertyInObject(acc, "checkResult.http.statusCode") ||
+          null;
+        if (curStatusCode > accStatusCode) {
+          return cur;
+        }
+      }
+
+      return acc;
+    }, false);
+
+    if (checkStatus == null) {
+      return false;
+    }
+
+    return checkStatus;
+  }
+
+  getStatus() {
+    const checkStatus = this.getCheckStatus();
+    const statusCode = findNestedPropertyInObject(
+      checkStatus,
+      "checkResult.http.statusCode"
+    );
+
+    return checkStatus
+      ? FrameworkStatus[statusCode].displayName
+      : super.getStatus();
+  }
+
+  getServiceStatus() {
+    const checkStatus = this.getCheckStatus();
+    const statusCode = findNestedPropertyInObject(
+      checkStatus,
+      "checkResult.http.statusCode"
+    );
+
+    return checkStatus
+      ? FrameworkStatus[statusCode].key
+      : super.getServiceStatus();
   }
 
   getTasksSummary() {
