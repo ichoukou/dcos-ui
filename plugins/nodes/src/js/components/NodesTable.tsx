@@ -29,10 +29,6 @@ import { cpuSorter, cpuRenderer } from "../columns/NodesTableCPUColumn";
 import { memSorter, memRenderer } from "../columns/NodesTableMemColumn";
 import { diskSorter, diskRenderer } from "../columns/NodesTableDiskColumn";
 import { gpuSorter, gpuRenderer } from "../columns/NodesTableGPUColumn";
-import {
-  spacingSizer,
-  spacingRenderer
-} from "../columns/NodesTableSpacingColumn";
 
 import PublicIPColumn from "../columns/NodesTablePublicIPColumn";
 
@@ -99,12 +95,20 @@ export default class NodesTable extends React.Component<
   }
 
   updateData(
-    data: Node[],
+    data: Node[] | null,
     sortColumn: string,
     sortDirection: SortDirection,
     currentSortDirection?: SortDirection,
     currentSortColumn?: string
   ): NodesTableState {
+    if (data === null) {
+      return {
+        data: null,
+        sortDirection,
+        sortColumn
+      };
+    }
+
     const copiedData = data.slice();
     if (
       sortDirection === currentSortDirection &&
@@ -159,7 +163,7 @@ export default class NodesTable extends React.Component<
   componentWillReceiveProps(nextProps: NodesTableProps): void {
     this.setState(
       this.updateData(
-        nextProps.hosts.getItems(),
+        nextProps.hosts ? nextProps.hosts.getItems() : null,
         this.state.sortColumn,
         this.state.sortDirection
       )
@@ -185,6 +189,7 @@ export default class NodesTable extends React.Component<
               />
             }
             cellRenderer={ipRenderer}
+            minWidth={120}
           />
 
           <Column
@@ -196,6 +201,8 @@ export default class NodesTable extends React.Component<
               />
             }
             cellRenderer={healthRenderer}
+            minWidth={80}
+            maxWidth={100}
           />
 
           <Column
@@ -205,6 +212,7 @@ export default class NodesTable extends React.Component<
               </HeaderCell>
             }
             cellRenderer={PublicIPColumn}
+            minWidth={125}
           />
 
           <Column
@@ -216,6 +224,7 @@ export default class NodesTable extends React.Component<
               />
             }
             cellRenderer={typeRenderer}
+            maxWidth={70}
           />
 
           <Column
@@ -227,6 +236,7 @@ export default class NodesTable extends React.Component<
               />
             }
             cellRenderer={this.regionRenderer}
+            minWidth={170}
           />
 
           <Column
@@ -238,6 +248,7 @@ export default class NodesTable extends React.Component<
               />
             }
             cellRenderer={zoneRenderer}
+            minWidth={100}
           />
 
           <Column
@@ -250,6 +261,8 @@ export default class NodesTable extends React.Component<
               />
             }
             cellRenderer={tasksRenderer}
+            minWidth={60}
+            maxWidth={80}
           />
 
           <Column
@@ -261,6 +274,8 @@ export default class NodesTable extends React.Component<
               />
             }
             cellRenderer={cpuRenderer}
+            growToFill={true}
+            minWidth={110}
           />
 
           <Column
@@ -272,6 +287,8 @@ export default class NodesTable extends React.Component<
               />
             }
             cellRenderer={memRenderer}
+            growToFill={true}
+            minWidth={110}
           />
 
           <Column
@@ -283,6 +300,8 @@ export default class NodesTable extends React.Component<
               />
             }
             cellRenderer={diskRenderer}
+            growToFill={true}
+            minWidth={110}
           />
 
           <Column
@@ -294,12 +313,8 @@ export default class NodesTable extends React.Component<
               />
             }
             cellRenderer={gpuRenderer}
-          />
-
-          <Column
-            header={<span title="Spacing" />}
-            cellRenderer={spacingRenderer}
-            width={spacingSizer}
+            growToFill={true}
+            minWidth={110}
           />
         </Table>
       </div>
